@@ -19,11 +19,41 @@ static unsigned char key2[17];
 static char string[400];
 static int sizeostring;
 
+int decifrarDado(char **dados){
 
+  struct crypto_cipher *tfm;
+    int i,count,div,modd;
+
+	if(strlen(key)<16)
+	{
+	for(i=strlen(key);i<16;i++)
+	{
+	key2[i]=0;
+	}
+
+	}
+	key2[16]='\0';
+    div=strlen(*dados)/AES_BLOCK_SIZE;
+    modd=strlen(*dados)%AES_BLOCK_SIZE;
+    if(modd>0)
+        div++;
+    count=div;
+    tfm=crypto_alloc_cipher("aes", 0, 16);
+    crypto_cipher_setkey(tfm,key2,16);
+    for(i=0;i<count;i++)
+    {
+        crypto_cipher_decrypt_one(tfm,string,*dados);
+        *dados=*dados+AES_BLOCK_SIZE;
+    }
+    *dados=string;
+    printk(KERN_INFO "Crypto: Valor da string decifrada: %s\n", *dados);
+
+    return strlen(string);
+}
 
 
 //funcoes criadas para modularizar parte de crypto deve retornar o tamanho de caracteres que devem ser lidos, ou seja o tamanho da string que sera enviada de volta para o usuario.
-int cifrarDado(char *dados){
+int cifrarDado(char **dados){
 
      struct crypto_cipher *tfm;
      int i,j,count,div,modd;
@@ -31,8 +61,8 @@ int cifrarDado(char *dados){
      strcpy(key2,key);
      memset(string,0,400);
 
-     div=strlen(dados)/AES_BLOCK_SIZE;
-     modd=strlen(dados)%AES_BLOCK_SIZE;
+     div=strlen(*dados)/AES_BLOCK_SIZE;
+     modd=strlen(*dados)%AES_BLOCK_SIZE;
 
      if(modd>0)
      div++;
@@ -49,96 +79,63 @@ int cifrarDado(char *dados){
 	}
 	key2[16]='\0';
 
-     printk(KERN_INFO "Crypto: TESTE VALORES VARIAVEIS: %s,%s\n", dados, key2);
+     printk(KERN_INFO "Crypto: TESTE VALORES VARIAVEIS: %s,%s\n", *dados, key2);
 
      tfm=crypto_alloc_cipher("aes", 0, 16);
      crypto_cipher_setkey(tfm,key2,16);
 
      for(i=0;i<count;i++)
      {
-         crypto_cipher_encrypt_one(tfm,string,dados);
-         dados=dados+AES_BLOCK_SIZE;
+         //crypto_cipher_encrypt_one(tfm,dados,dados);
+	 crypto_cipher_encrypt_one(tfm,string,*dados);
+         *dados=*dados+AES_BLOCK_SIZE;
 
      }
-
-    printk(KERN_INFO "Crypto: Valor da string encriptada: %s\n", string);
+    *dados=string;
+    printk(KERN_INFO "Crypto: Valor da string encriptada: %s\n", *dados);
+    //printk(KERN_INFO "Crypto: Valor da string encriptada: %s\n", string);
      crypto_free_cipher(tfm);
 
 
-    //decifrarDado(string);
+    //decifrarDado(*dados);
     return strlen(string);
 }
-int decifrarDado(char *dados){
 
-  struct crypto_cipher *tfm;
-    int i,count,div,modd;
-
-	if(strlen(key)<16)
-	{
-	for(i=strlen(key);i<16;i++)
-	{
-	key2[i]=0;
-	}
-
-	}
-	key2[16]='\0';
-    div=strlen(dados)/AES_BLOCK_SIZE;
-    modd=strlen(dados)%AES_BLOCK_SIZE;
-    if(modd>0)
-        div++;
-    count=div;
-    tfm=crypto_alloc_cipher("aes", 0, 16);
-    crypto_cipher_setkey(tfm,key2,16);
-    for(i=0;i<count;i++)
-    {
-        crypto_cipher_decrypt_one(tfm,string,dados);
-        dados=dados+AES_BLOCK_SIZE;
-    }
-    printk(KERN_INFO "Crypto: Valor da string decifrada: %s\n", string);
-
-    return strlen(string);
-}
 
 static ssize_t custom_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
-	char *buf;
-	struct iov_iter *from1;
-	iov_iter_init(from1, from->iov_offset,
-		       from->iov,from->nr_segs,
-		       from->count);
-	buf = from->iov->iov_base;
-	from1->iov->iov_base=from->iov->iov_base;
+	//char *buf;
+	//struct iov_iter *from1;
+	//buf = from->iov->iov_base;
+	//from1->iov->iov_base=from->iov->iov_base;
 	
-	printk(KERN_ALERT "Normal %s",from->iov->iov_base);
+	//iov_iter_init(from1, 0,const struct iovec *iov, unsigned long nr_segs,size_t count);
 	
-	cifrarDado(buf);
-	from1->iov->iov_base = buf;
+	//printk(KERN_ALERT "Normal from->iov->iov_base %s",from->iov->iov_base);
+	cifrarDado((char **)&(from->iov->iov_base));
+	//decifrarDado((char **)&(from->iov->iov_base));
 	
-	printk(KERN_ALERT "Cifrado iov_base %s",from1->iov1->iov_base);
-	//printk(KERN_ALERT "Cifrado buf %s",buf);
+	//printk(KERN_ALERT "Cifrado iov_base %s",from1->iov1->iov_base);
+	//printk(KERN_ALERT "Cifrado from->iov->iov_base %s",from->iov->iov_base);
 	
 	generic_file_write_iter(iocb, from);
 	
 }
 
-static ssize_t custom_file_read_iter (struct kiocb * iocb, struct iov_iter * iter)
+static ssize_t custom_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
 
-	char *buf;
-	struct iov_iter1 *from1;
 	
 	
-	from1->iov1->iov_base=iter->iov->iov_base;
+	printk(KERN_ALERT "STRING PARA DECIFRAR %s",iter->iov->iov_base);
 	
-	printk(KERN_ALERT "Normal %s",iter->iov->iov_base);
+	decifrarDado((char **)&(iter->iov->iov_base));
 	
-	//decifrarDado(from1->iov1->iov_base);
-	//from1->iov1->iov_base = buf;
 	
-	printk(KERN_ALERT "Cifrado iov_base %s",from1->iov1->iov_base);
+	printk(KERN_ALERT "Decifrado!!!!!!  %s",iter->iov->iov_base);
 	//printk(KERN_ALERT "Cifrado buf %s",buf);
 	
-	generic_file_write_iter(iocb, from);
+	generic_file_read_iter(iocb, iter);
 
 
 }
@@ -190,4 +187,3 @@ const struct inode_operations minix_file_inode_operations = {
 	.setattr	= minix_setattr,
 	.getattr	= minix_getattr,
 };
-
