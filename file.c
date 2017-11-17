@@ -10,17 +10,15 @@
 #include <linux/moduleparam.h>
 #include <linux/crypto.h>
 #include <linux/uio.h>
+#include <linux/string.h>
 static char *key = "asd";
-
 module_param(key,charp,0000);
 MODULE_PARM_DESC(key,"Chave");
 static unsigned char key2[17];
 #define  AES_BLOCK_SIZE 16
 static char string[400];
-static int sizeostring;
 
 int decifrarDado(char **dados){
-
   struct crypto_cipher *tfm;
     int i,count,div,modd;
 
@@ -86,58 +84,34 @@ int cifrarDado(char **dados){
 
      for(i=0;i<count;i++)
      {
-         //crypto_cipher_encrypt_one(tfm,dados,dados);
+
 	 crypto_cipher_encrypt_one(tfm,string,*dados);
          *dados=*dados+AES_BLOCK_SIZE;
 
      }
     *dados=string;
+
     printk(KERN_INFO "Crypto: Valor da string encriptada: %s\n", *dados);
-    //printk(KERN_INFO "Crypto: Valor da string encriptada: %s\n", string);
      crypto_free_cipher(tfm);
 
-
-    //decifrarDado(*dados);
     return strlen(string);
 }
 
 
 static ssize_t custom_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
 {
-	//char *buf;
-	//struct iov_iter *from1;
-	//buf = from->iov->iov_base;
-	//from1->iov->iov_base=from->iov->iov_base;
-	
-	//iov_iter_init(from1, 0,const struct iovec *iov, unsigned long nr_segs,size_t count);
-	
-	//printk(KERN_ALERT "Normal from->iov->iov_base %s",from->iov->iov_base);
+
 	cifrarDado((char **)&(from->iov->iov_base));
-	//decifrarDado((char **)&(from->iov->iov_base));
-	
-	//printk(KERN_ALERT "Cifrado iov_base %s",from1->iov1->iov_base);
-	//printk(KERN_ALERT "Cifrado from->iov->iov_base %s",from->iov->iov_base);
-	
+	printk(KERN_ALERT "Cifrado iov_base %s",from->iov->iov_base);
 	generic_file_write_iter(iocb, from);
-	
+
 }
 
 static ssize_t custom_file_read_iter(struct kiocb *iocb, struct iov_iter *iter)
 {
-
-	
-	
-	printk(KERN_ALERT "STRING PARA DECIFRAR %s",iter->iov->iov_base);
-	
 	decifrarDado((char **)&(iter->iov->iov_base));
-	
-	
-	printk(KERN_ALERT "Decifrado!!!!!!  %s",iter->iov->iov_base);
-	//printk(KERN_ALERT "Cifrado buf %s",buf);
-	
+	decifrarDado((char **)&(iter->iov->iov_base));
 	generic_file_read_iter(iocb, iter);
-
-
 }
 
 
@@ -187,3 +161,4 @@ const struct inode_operations minix_file_inode_operations = {
 	.setattr	= minix_setattr,
 	.getattr	= minix_getattr,
 };
+

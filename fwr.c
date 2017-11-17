@@ -31,7 +31,8 @@ int main(int argc, char *argv[]){
 
         else if(*argv[1] == 'r')
         {
-            strcpy(fileName,argv[2]);
+           strcpy(fileName, "/mnt/point1/");
+            strcat(fileName, argv[2]);
             strcat(fileName,".txt");
             arq = fopen(fileName,"rt");
             if(!arq)
