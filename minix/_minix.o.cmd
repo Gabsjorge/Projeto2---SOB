@@ -1,0 +1,1 @@
+cmd_/home/machine/Documents/minix/minix.o := ld -m elf_x86_64   -r -o /home/machine/Documents/minix/minix.o /home/machine/Documents/minix/bitmap.o /home/machine/Documents/minix/itree_v1.o /home/machine/Documents/minix/itree_v2.o /home/machine/Documents/minix/namei.o /home/machine/Documents/minix/inode.o /home/machine/Documents/minix/file.o /home/machine/Documents/minix/dir.o 
